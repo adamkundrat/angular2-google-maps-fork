@@ -1,6 +1,6 @@
 /**
  * angular2-google-maps - Angular 2 components for Google Maps
- * @version v0.12.1
+ * @version v0.13.0
  * @link https://github.com/SebastianM/angular2-google-maps#readme
  * @license MIT
  */
@@ -50,9 +50,24 @@ export let SebmGoogleMapMarker = class SebmGoogleMapMarker {
          */
         this.draggable = false;
         /**
+         * If true, the marker is visible
+         */
+        this.visible = true;
+        /**
          * Whether to automatically open the child info window when the marker is clicked.
          */
         this.openInfoWindow = true;
+        /**
+         * The marker's opacity between 0.0 and 1.0.
+         */
+        this.opacity = 1;
+        /**
+         * All markers are displayed on the map in order of their zIndex, with higher values displaying in
+         * front of markers with lower values. By default, markers are displayed according to their
+         * vertical position on screen, with lower markers appearing in front of markers further up the
+         * screen.
+         */
+        this.zIndex = 1;
         /**
          * This event emitter gets emitted when the user clicks on the marker.
          */
@@ -62,6 +77,7 @@ export let SebmGoogleMapMarker = class SebmGoogleMapMarker {
          */
         this.dragEnd = new EventEmitter();
         this._markerAddedToManger = false;
+        this._observableSubscriptions = [];
         this._id = (markerId++).toString();
     }
     /* @internal */
@@ -96,25 +112,40 @@ export let SebmGoogleMapMarker = class SebmGoogleMapMarker {
         if (changes['iconUrl']) {
             this._markerManager.updateIcon(this);
         }
+        if (changes['opacity']) {
+            this._markerManager.updateOpacity(this);
+        }
+        if (changes['visible']) {
+            this._markerManager.updateVisible(this);
+        }
+        if (changes['zIndex']) {
+            this._markerManager.updateZIndex(this);
+        }
     }
     _addEventListeners() {
-        this._markerManager.createEventObservable('click', this).subscribe(() => {
+        const cs = this._markerManager.createEventObservable('click', this).subscribe(() => {
             if (this.openInfoWindow && this._infoWindow != null) {
                 this._infoWindow.open();
             }
             this.markerClick.emit(null);
         });
-        this._markerManager.createEventObservable('dragend', this)
+        this._observableSubscriptions.push(cs);
+        const ds = this._markerManager.createEventObservable('dragend', this)
             .subscribe((e) => {
             this.dragEnd.emit({ coords: { lat: e.latLng.lat(), lng: e.latLng.lng() } });
         });
+        this._observableSubscriptions.push(ds);
     }
     /** @internal */
     id() { return this._id; }
     /** @internal */
     toString() { return 'SebmGoogleMapMarker-' + this._id.toString(); }
     /** @internal */
-    ngOnDestroy() { this._markerManager.deleteMarker(this); }
+    ngOnDestroy() {
+        this._markerManager.deleteMarker(this);
+        // unsubscribe all registered observable subscriptions
+        this._observableSubscriptions.forEach((s) => s.unsubscribe());
+    }
 };
 __decorate([
     ContentChild(SebmGoogleMapInfoWindow), 
@@ -125,7 +156,7 @@ SebmGoogleMapMarker = __decorate([
         selector: 'sebm-google-map-marker',
         inputs: [
             'latitude', 'longitude', 'title', 'label', 'draggable: markerDraggable', 'iconUrl',
-            'openInfoWindow'
+            'openInfoWindow', 'fitBounds', 'opacity', 'visible', 'zIndex'
         ],
         outputs: ['markerClick', 'dragEnd']
     }), 

@@ -1,6 +1,6 @@
 /**
  * angular2-google-maps - Angular 2 components for Google Maps
- * @version v0.12.1
+ * @version v0.13.0
  * @link https://github.com/SebastianM/angular2-google-maps#readme
  * @license MIT
  */
@@ -52,12 +52,25 @@ var MarkerManager = (function () {
     MarkerManager.prototype.updateIcon = function (marker) {
         return this._markers.get(marker).then(function (m) { return m.setIcon(marker.iconUrl); });
     };
+    MarkerManager.prototype.updateOpacity = function (marker) {
+        return this._markers.get(marker).then(function (m) { return m.setOpacity(marker.opacity); });
+    };
+    MarkerManager.prototype.updateVisible = function (marker) {
+        return this._markers.get(marker).then(function (m) { return m.setVisible(marker.visible); });
+    };
+    MarkerManager.prototype.updateZIndex = function (marker) {
+        return this._markers.get(marker).then(function (m) { return m.setZIndex(marker.zIndex); });
+    };
     MarkerManager.prototype.addMarker = function (marker) {
         var markerPromise = this._mapsWrapper.createMarker({
             position: { lat: marker.latitude, lng: marker.longitude },
             label: marker.label,
             draggable: marker.draggable,
-            icon: marker.iconUrl
+            icon: marker.iconUrl,
+            opacity: marker.opacity,
+            visible: marker.visible,
+            zIndex: marker.zIndex,
+            title: marker.title
         });
         this._markers.set(marker, markerPromise);
     };

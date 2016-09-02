@@ -1,14 +1,14 @@
 /**
  * angular2-google-maps - Angular 2 components for Google Maps
- * @version v0.12.1
+ * @version v0.13.0
  * @link https://github.com/SebastianM/angular2-google-maps#readme
  * @license MIT
  */
 import { ElementRef, EventEmitter, OnChanges, OnInit, SimpleChange } from '@angular/core';
-import { MouseEvent } from '../events';
+import { MouseEvent } from '../map-types';
 import { GoogleMapsAPIWrapper } from '../services/google-maps-api-wrapper';
 import { LatLngLiteral } from '../services/google-maps-types';
-import { LatLngBounds, MapTypeStyle } from '../services/google-maps-types';
+import { LatLngBounds, LatLngBoundsLiteral, MapTypeStyle } from '../services/google-maps-types';
 /**
  * SebMGoogleMap renders a Google Map.
  * **Important note**: To be able see a map in the browser, you have to define a height for the CSS
@@ -49,6 +49,10 @@ export declare class SebmGoogleMap implements OnChanges, OnInit {
      * The zoom level of the map. The default zoom level is 8.
      */
     zoom: number;
+    /**
+     * Enables/disables if map is draggable.
+     */
+    draggable: boolean;
     /**
      * Enables/disables zoom and center on double click. Enabled by default.
      */
@@ -108,6 +112,14 @@ export declare class SebmGoogleMap implements OnChanges, OnInit {
      */
     streetViewControl: boolean;
     /**
+     * Sets the viewport to contain the given bounds.
+     */
+    fitBounds: LatLngBoundsLiteral | LatLngBounds;
+    /**
+     * The initial enabled/disabled state of the Scale control. This is disabled by default.
+     */
+    scaleControl: boolean;
+    /**
      * Map option attributes that can change over time
      */
     private static _mapOptionsAttributes;
@@ -139,6 +151,10 @@ export declare class SebmGoogleMap implements OnChanges, OnInit {
      * This event is fired when the map becomes idle after panning or zooming.
      */
     idle: EventEmitter<void>;
+    /**
+     * This event is fired when the zoom level has changed.
+     */
+    zoomChange: EventEmitter<number>;
     constructor(_elem: ElementRef, _mapsWrapper: GoogleMapsAPIWrapper);
     /** @internal */
     ngOnInit(): void;
@@ -154,7 +170,8 @@ export declare class SebmGoogleMap implements OnChanges, OnInit {
      * Returns a promise that gets resolved after the event was triggered.
      */
     triggerResize(): Promise<void>;
-    private _updateCenter();
+    private _updatePosition(changes);
+    private _fitBounds();
     private _handleMapCenterChange();
     private _handleBoundsChange();
     private _handleMapZoomChange();

@@ -1,20 +1,21 @@
 /**
  * angular2-google-maps - Angular 2 components for Google Maps
- * @version v0.12.1
+ * @version v0.13.0
  * @link https://github.com/SebastianM/angular2-google-maps#readme
  * @license MIT
  */
 export declare var google: any;
-export interface GoogleMap {
+export interface GoogleMap extends MVCObject {
     constructor(el: HTMLElement, opts?: MapOptions): void;
     panTo(latLng: LatLng | LatLngLiteral): void;
     setZoom(zoom: number): void;
-    addListener(eventName: string, fn: Function): void;
     getCenter(): LatLng;
     setCenter(latLng: LatLng | LatLngLiteral): void;
     getBounds(): LatLngBounds;
     getZoom(): number;
     setOptions(options: MapOptions): void;
+    panToBounds(latLngBounds: LatLngBounds | LatLngBoundsLiteral): void;
+    fitBounds(bounds: LatLngBounds | LatLngBoundsLiteral): void;
 }
 export interface LatLng {
     constructor(lat: number, lng: number): void;
@@ -29,6 +30,9 @@ export interface Marker extends MVCObject {
     setLabel(label: string | MarkerLabel): void;
     setDraggable(draggable: boolean): void;
     setIcon(icon: string): void;
+    setOpacity(opacity: number): void;
+    setVisible(visible: boolean): void;
+    setZIndex(zIndex: number): void;
     getLabel(): MarkerLabel;
 }
 export interface MarkerOptions {
@@ -38,6 +42,9 @@ export interface MarkerOptions {
     label?: string | MarkerLabel;
     draggable?: boolean;
     icon?: string;
+    opacity?: number;
+    visible?: boolean;
+    zIndex?: number;
 }
 export interface MarkerLabel {
     color: string;
@@ -112,12 +119,14 @@ export interface MapOptions {
     disableDoubleClickZoom?: boolean;
     disableDefaultUI?: boolean;
     backgroundColor?: string;
+    draggable?: boolean;
     draggableCursor?: string;
     draggingCursor?: string;
     keyboardShortcuts?: boolean;
     zoomControl?: boolean;
     styles?: MapTypeStyle[];
     streetViewControl?: boolean;
+    scaleControl?: boolean;
 }
 export interface MapTypeStyle {
     elementType: 'all' | 'geometry' | 'geometry.fill' | 'geometry.stroke' | 'labels' | 'labels.icon' | 'labels.text' | 'labels.text.fill' | 'labels.text.stroke';
@@ -150,7 +159,6 @@ export interface InfoWindow {
     setZIndex(zIndex: number): void;
 }
 export interface MVCObject {
-    constructor(): void;
     addListener(eventName: string, handler: Function): MapsEventListener;
 }
 export interface MapsEventListener {
@@ -170,4 +178,63 @@ export interface InfoWindowOptions {
     pixelOffset?: Size;
     position?: LatLng | LatLngLiteral;
     zIndex?: number;
+}
+export interface Point {
+    x: number;
+    y: number;
+    equals(other: Point): boolean;
+    toString(): string;
+}
+export interface GoogleSymbol {
+    anchor?: Point;
+    fillColor?: string;
+    fillOpacity?: string;
+    labelOrigin?: Point;
+    path?: string;
+    rotation?: number;
+    scale?: number;
+    strokeColor?: string;
+    strokeOpacity?: number;
+    strokeWeight?: number;
+}
+export interface IconSequence {
+    fixedRotation?: boolean;
+    icon?: GoogleSymbol;
+    offset?: string;
+    repeat?: string;
+}
+export interface PolylineOptions {
+    clickable?: boolean;
+    draggable?: boolean;
+    editable?: boolean;
+    geodesic?: boolean;
+    icon?: Array<IconSequence>;
+    map?: GoogleMap;
+    path?: Array<LatLng> | Array<LatLng | LatLngLiteral>;
+    strokeColor?: string;
+    strokeOpacity?: number;
+    strokeWeight?: number;
+    visible?: boolean;
+    zIndex?: number;
+}
+export interface Polyline extends MVCObject {
+    getDraggable(): boolean;
+    getEditable(): boolean;
+    getMap(): GoogleMap;
+    getPath(): Array<LatLng>;
+    getVisible(): boolean;
+    setDraggable(draggable: boolean): void;
+    setEditable(editable: boolean): void;
+    setMap(map: GoogleMap): void;
+    setOptions(options: PolylineOptions): void;
+    setPath(path: Array<LatLng | LatLngLiteral>): void;
+    setVisible(visible: boolean): void;
+}
+/**
+ * PolyMouseEvent gets emitted when the user triggers mouse events on a polyline.
+ */
+export interface PolyMouseEvent extends MouseEvent {
+    edge: number;
+    path: number;
+    vertex: number;
 }

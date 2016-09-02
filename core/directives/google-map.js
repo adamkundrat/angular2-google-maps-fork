@@ -1,6 +1,6 @@
 /**
  * angular2-google-maps - Angular 2 components for Google Maps
- * @version v0.12.1
+ * @version v0.13.0
  * @link https://github.com/SebastianM/angular2-google-maps#readme
  * @license MIT
  */
@@ -19,6 +19,7 @@ var google_maps_api_wrapper_1 = require('../services/google-maps-api-wrapper');
 var circle_manager_1 = require('../services/managers/circle-manager');
 var info_window_manager_1 = require('../services/managers/info-window-manager');
 var marker_manager_1 = require('../services/managers/marker-manager');
+var polyline_manager_1 = require('../services/managers/polyline-manager');
 /**
  * SebMGoogleMap renders a Google Map.
  * **Important note**: To be able see a map in the browser, you have to define a height for the CSS
@@ -61,6 +62,10 @@ var SebmGoogleMap = (function () {
          */
         this.zoom = 8;
         /**
+         * Enables/disables if map is draggable.
+         */
+        this.draggable = true;
+        /**
          * Enables/disables zoom and center on double click. Enabled by default.
          */
         this.disableDoubleClickZoom = false;
@@ -99,6 +104,14 @@ var SebmGoogleMap = (function () {
          * on which the Street View road overlay should not appear (e.g. a non-Earth map type).
          */
         this.streetViewControl = true;
+        /**
+         * Sets the viewport to contain the given bounds.
+         */
+        this.fitBounds = null;
+        /**
+         * The initial enabled/disabled state of the Scale control. This is disabled by default.
+         */
+        this.scaleControl = false;
         this._observableSubscriptions = [];
         /**
          * This event emitter gets emitted when the user clicks on the map (but not when they click on a
@@ -127,6 +140,10 @@ var SebmGoogleMap = (function () {
          * This event is fired when the map becomes idle after panning or zooming.
          */
         this.idle = new core_1.EventEmitter();
+        /**
+         * This event is fired when the zoom level has changed.
+         */
+        this.zoomChange = new core_1.EventEmitter();
     }
     /** @internal */
     SebmGoogleMap.prototype.ngOnInit = function () {
@@ -136,17 +153,20 @@ var SebmGoogleMap = (function () {
     };
     SebmGoogleMap.prototype._initMapInstance = function (el) {
         this._mapsWrapper.createMap(el, {
-            center: { lat: this.latitude, lng: this.longitude },
+            center: { lat: this.latitude || 0, lng: this.longitude || 0 },
             zoom: this.zoom,
             disableDefaultUI: this.disableDefaultUI,
             backgroundColor: this.backgroundColor,
+            draggable: this.draggable,
             draggableCursor: this.draggableCursor,
             draggingCursor: this.draggingCursor,
             keyboardShortcuts: this.keyboardShortcuts,
             zoomControl: this.zoomControl,
             styles: this.styles,
-            streetViewControl: this.streetViewControl
+            streetViewControl: this.streetViewControl,
+            scaleControl: this.scaleControl
         });
+        // register event listeners
         this._handleMapCenterChange();
         this._handleMapZoomChange();
         this._handleMapMouseEvents();
@@ -161,9 +181,7 @@ var SebmGoogleMap = (function () {
     /* @internal */
     SebmGoogleMap.prototype.ngOnChanges = function (changes) {
         this._updateMapOptionsChanges(changes);
-        if (changes['latitude'] != null || changes['longitude'] != null) {
-            this._updateCenter();
-        }
+        this._updatePosition(changes);
     };
     SebmGoogleMap.prototype._updateMapOptionsChanges = function (changes) {
         var options = {};
@@ -184,7 +202,17 @@ var SebmGoogleMap = (function () {
             setTimeout(function () { return _this._mapsWrapper.triggerMapEvent('resize').then(function () { return resolve(); }); });
         });
     };
-    SebmGoogleMap.prototype._updateCenter = function () {
+    SebmGoogleMap.prototype._updatePosition = function (changes) {
+        if (changes['latitude'] == null && changes['longitude'] == null &&
+            changes['fitBounds'] == null) {
+            // no position update needed
+            return;
+        }
+        // we prefer fitBounds in changes
+        if (changes['fitBounds'] && this.fitBounds != null) {
+            this._fitBounds();
+            return;
+        }
         if (typeof this.latitude !== 'number' || typeof this.longitude !== 'number') {
             return;
         }
@@ -198,6 +226,13 @@ var SebmGoogleMap = (function () {
         else {
             this._mapsWrapper.setCenter(newCenter);
         }
+    };
+    SebmGoogleMap.prototype._fitBounds = function () {
+        if (this.usePanning) {
+            this._mapsWrapper.panToBounds(this.fitBounds);
+            return;
+        }
+        this._mapsWrapper.fitBounds(this.fitBounds);
     };
     SebmGoogleMap.prototype._handleMapCenterChange = function () {
         var _this = this;
@@ -213,14 +248,17 @@ var SebmGoogleMap = (function () {
     SebmGoogleMap.prototype._handleBoundsChange = function () {
         var _this = this;
         var s = this._mapsWrapper.subscribeToMapEvent('bounds_changed').subscribe(function () {
-            _this._mapsWrapper.getBounds().then(function (bounds) { return _this.boundsChange.emit(bounds); });
+            _this._mapsWrapper.getBounds().then(function (bounds) { _this.boundsChange.emit(bounds); });
         });
         this._observableSubscriptions.push(s);
     };
     SebmGoogleMap.prototype._handleMapZoomChange = function () {
         var _this = this;
         var s = this._mapsWrapper.subscribeToMapEvent('zoom_changed').subscribe(function () {
-            _this._mapsWrapper.getZoom().then(function (z) { return _this.zoom = z; });
+            _this._mapsWrapper.getZoom().then(function (z) {
+                _this.zoom = z;
+                _this.zoomChange.emit(z);
+            });
         });
         this._observableSubscriptions.push(s);
     };
@@ -247,19 +285,22 @@ var SebmGoogleMap = (function () {
      * Map option attributes that can change over time
      */
     SebmGoogleMap._mapOptionsAttributes = [
-        'disableDoubleClickZoom', 'scrollwheel', 'draggableCursor', 'draggingCursor',
-        'keyboardShortcuts', 'zoomControl', 'styles', 'streetViewControl'
+        'disableDoubleClickZoom', 'scrollwheel', 'draggable', 'draggableCursor', 'draggingCursor',
+        'keyboardShortcuts', 'zoomControl', 'styles', 'streetViewControl', 'zoom'
     ];
     SebmGoogleMap = __decorate([
         core_1.Component({
             selector: 'sebm-google-map',
-            providers: [google_maps_api_wrapper_1.GoogleMapsAPIWrapper, marker_manager_1.MarkerManager, info_window_manager_1.InfoWindowManager, circle_manager_1.CircleManager],
+            providers: [google_maps_api_wrapper_1.GoogleMapsAPIWrapper, marker_manager_1.MarkerManager, info_window_manager_1.InfoWindowManager, circle_manager_1.CircleManager, polyline_manager_1.PolylineManager],
             inputs: [
-                'longitude', 'latitude', 'zoom', 'disableDoubleClickZoom', 'disableDefaultUI', 'scrollwheel',
-                'backgroundColor', 'draggableCursor', 'draggingCursor', 'keyboardShortcuts', 'zoomControl',
-                'styles', 'usePanning', 'streetViewControl'
+                'longitude', 'latitude', 'zoom', 'draggable: mapDraggable', 'disableDoubleClickZoom',
+                'disableDefaultUI', 'scrollwheel', 'backgroundColor', 'draggableCursor', 'draggingCursor',
+                'keyboardShortcuts', 'zoomControl', 'styles', 'usePanning', 'streetViewControl', 'fitBounds',
+                'scaleControl'
             ],
-            outputs: ['mapClick', 'mapRightClick', 'mapDblClick', 'centerChange', 'idle', 'boundsChange'],
+            outputs: [
+                'mapClick', 'mapRightClick', 'mapDblClick', 'centerChange', 'idle', 'boundsChange', 'zoomChange'
+            ],
             host: { '[class.sebm-google-map-container]': 'true' },
             styles: ["\n    .sebm-google-map-container-inner {\n      width: inherit;\n      height: inherit;\n    }\n    .sebm-google-map-content {\n      display:none;\n    }\n  "],
             template: "\n    <div class='sebm-google-map-container-inner'></div>\n    <div class='sebm-google-map-content'>\n      <ng-content></ng-content>\n    </div>\n  "

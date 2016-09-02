@@ -1,6 +1,6 @@
 /**
  * angular2-google-maps - Angular 2 components for Google Maps
- * @version v0.12.1
+ * @version v0.13.0
  * @link https://github.com/SebastianM/angular2-google-maps#readme
  * @license MIT
  */
@@ -30,7 +30,6 @@ export let GoogleMapsAPIWrapper = class GoogleMapsAPIWrapper {
     createMap(el, mapOptions) {
         return this._loader.load().then(() => {
             const map = new google.maps.Map(el, mapOptions);
-            this._gmap = map;
             this._mapResolver(map);
             return;
         });
@@ -59,6 +58,13 @@ export let GoogleMapsAPIWrapper = class GoogleMapsAPIWrapper {
             return new google.maps.Circle(options);
         });
     }
+    createPolyline(options) {
+        return this.getNativeMap().then((map) => {
+            let line = new google.maps.Polyline(options);
+            line.setMap(map);
+            return line;
+        });
+    }
     subscribeToMapEvent(eventName) {
         return Observable.create((observer) => {
             this._map.then((m) => {
@@ -82,11 +88,16 @@ export let GoogleMapsAPIWrapper = class GoogleMapsAPIWrapper {
     panTo(latLng) {
         return this._map.then((map) => map.panTo(latLng));
     }
+    fitBounds(latLng) {
+        return this._map.then((map) => map.fitBounds(latLng));
+    }
+    panToBounds(latLng) {
+        return this._map.then((map) => map.panToBounds(latLng));
+    }
     /**
      * Returns the native Google Maps Map instance. Be careful when using this instance directly.
      */
     getNativeMap() { return this._map; }
-    getNativeMapWithoutPromise() { return this._gmap; }
     /**
      * Triggers the given event name on the map instance.
      */

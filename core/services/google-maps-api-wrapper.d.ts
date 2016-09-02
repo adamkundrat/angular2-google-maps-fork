@@ -1,12 +1,14 @@
 /**
  * angular2-google-maps - Angular 2 components for Google Maps
- * @version v0.12.1
+ * @version v0.13.0
  * @link https://github.com/SebastianM/angular2-google-maps#readme
  * @license MIT
  */
 import { NgZone } from '@angular/core';
 import { Observable } from 'rxjs/Observable';
 import * as mapTypes from './google-maps-types';
+import { Polyline } from './google-maps-types';
+import { PolylineOptions } from './google-maps-types';
 import { MapsAPILoader } from './maps-api-loader/maps-api-loader';
 /**
  * Wrapper class that handles the communication with the Google Maps Javascript
@@ -17,7 +19,6 @@ export declare class GoogleMapsAPIWrapper {
     private _zone;
     private _map;
     private _mapResolver;
-    _gmap: mapTypes.GoogleMap;
     constructor(_loader: MapsAPILoader, _zone: NgZone);
     createMap(el: HTMLElement, mapOptions: mapTypes.MapOptions): Promise<void>;
     setMapOptions(options: mapTypes.MapOptions): void;
@@ -30,6 +31,7 @@ export declare class GoogleMapsAPIWrapper {
      * Creates a google.map.Circle for the current map.
      */
     createCircle(options: mapTypes.CircleOptions): Promise<mapTypes.Circle>;
+    createPolyline(options: PolylineOptions): Promise<Polyline>;
     subscribeToMapEvent<E>(eventName: string): Observable<E>;
     setCenter(latLng: mapTypes.LatLngLiteral): Promise<void>;
     getZoom(): Promise<number>;
@@ -37,11 +39,12 @@ export declare class GoogleMapsAPIWrapper {
     setZoom(zoom: number): Promise<void>;
     getCenter(): Promise<mapTypes.LatLng>;
     panTo(latLng: mapTypes.LatLng | mapTypes.LatLngLiteral): Promise<void>;
+    fitBounds(latLng: mapTypes.LatLngBounds | mapTypes.LatLngBoundsLiteral): Promise<void>;
+    panToBounds(latLng: mapTypes.LatLngBounds | mapTypes.LatLngBoundsLiteral): Promise<void>;
     /**
      * Returns the native Google Maps Map instance. Be careful when using this instance directly.
      */
     getNativeMap(): Promise<mapTypes.GoogleMap>;
-    getNativeMapWithoutPromise(): mapTypes.GoogleMap;
     /**
      * Triggers the given event name on the map instance.
      */

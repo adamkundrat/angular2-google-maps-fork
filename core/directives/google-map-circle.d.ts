@@ -1,11 +1,11 @@
 /**
  * angular2-google-maps - Angular 2 components for Google Maps
- * @version v0.12.1
+ * @version v0.13.0
  * @link https://github.com/SebastianM/angular2-google-maps#readme
  * @license MIT
  */
 import { EventEmitter, OnChanges, OnDestroy, OnInit, SimpleChange } from '@angular/core';
-import { MouseEvent } from '../events';
+import { MouseEvent } from '../map-types';
 import { LatLng, LatLngBounds, LatLngLiteral } from '../services/google-maps-types';
 import { CircleManager } from '../services/managers/circle-manager';
 export declare class SebmGoogleMapCircle implements OnInit, OnChanges, OnDestroy {

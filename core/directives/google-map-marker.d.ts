@@ -1,11 +1,11 @@
 /**
  * angular2-google-maps - Angular 2 components for Google Maps
- * @version v0.12.1
+ * @version v0.13.0
  * @link https://github.com/SebastianM/angular2-google-maps#readme
  * @license MIT
  */
 import { AfterContentInit, EventEmitter, OnChanges, OnDestroy, SimpleChange } from '@angular/core';
-import { MouseEvent } from '../events';
+import { MouseEvent } from '../map-types';
 import { MarkerManager } from '../services/managers/marker-manager';
 /**
  * SebmGoogleMapMarker renders a map marker inside a {@link SebmGoogleMap}.
@@ -59,9 +59,24 @@ export declare class SebmGoogleMapMarker implements OnDestroy, OnChanges, AfterC
      */
     iconUrl: string;
     /**
+     * If true, the marker is visible
+     */
+    visible: boolean;
+    /**
      * Whether to automatically open the child info window when the marker is clicked.
      */
     openInfoWindow: boolean;
+    /**
+     * The marker's opacity between 0.0 and 1.0.
+     */
+    opacity: number;
+    /**
+     * All markers are displayed on the map in order of their zIndex, with higher values displaying in
+     * front of markers with lower values. By default, markers are displayed according to their
+     * vertical position on screen, with lower markers appearing in front of markers further up the
+     * screen.
+     */
+    zIndex: number;
     /**
      * This event emitter gets emitted when the user clicks on the marker.
      */
@@ -73,6 +88,7 @@ export declare class SebmGoogleMapMarker implements OnDestroy, OnChanges, AfterC
     private _infoWindow;
     private _markerAddedToManger;
     private _id;
+    private _observableSubscriptions;
     constructor(_markerManager: MarkerManager);
     ngAfterContentInit(): void;
     /** @internal */

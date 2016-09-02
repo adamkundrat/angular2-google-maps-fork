@@ -1,6 +1,6 @@
 /**
  * angular2-google-maps - Angular 2 components for Google Maps
- * @version v0.12.1
+ * @version v0.13.0
  * @link https://github.com/SebastianM/angular2-google-maps#readme
  * @license MIT
  */
@@ -20,6 +20,9 @@ export declare class MarkerManager {
     updateLabel(marker: SebmGoogleMapMarker): Promise<void>;
     updateDraggable(marker: SebmGoogleMapMarker): Promise<void>;
     updateIcon(marker: SebmGoogleMapMarker): Promise<void>;
+    updateOpacity(marker: SebmGoogleMapMarker): Promise<void>;
+    updateVisible(marker: SebmGoogleMapMarker): Promise<void>;
+    updateZIndex(marker: SebmGoogleMapMarker): Promise<void>;
     addMarker(marker: SebmGoogleMapMarker): void;
     getNativeMarker(marker: SebmGoogleMapMarker): Promise<Marker>;
     createEventObservable<T>(eventName: string, marker: SebmGoogleMapMarker): Observable<T>;

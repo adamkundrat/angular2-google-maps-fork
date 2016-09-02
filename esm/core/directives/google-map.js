@@ -1,6 +1,6 @@
 /**
  * angular2-google-maps - Angular 2 components for Google Maps
- * @version v0.12.1
+ * @version v0.13.0
  * @link https://github.com/SebastianM/angular2-google-maps#readme
  * @license MIT
  */
@@ -18,6 +18,7 @@ import { GoogleMapsAPIWrapper } from '../services/google-maps-api-wrapper';
 import { CircleManager } from '../services/managers/circle-manager';
 import { InfoWindowManager } from '../services/managers/info-window-manager';
 import { MarkerManager } from '../services/managers/marker-manager';
+import { PolylineManager } from '../services/managers/polyline-manager';
 /**
  * SebMGoogleMap renders a Google Map.
  * **Important note**: To be able see a map in the browser, you have to define a height for the CSS
@@ -61,6 +62,10 @@ export let SebmGoogleMap = SebmGoogleMap_1 = class SebmGoogleMap {
          */
         this.zoom = 8;
         /**
+         * Enables/disables if map is draggable.
+         */
+        this.draggable = true;
+        /**
          * Enables/disables zoom and center on double click. Enabled by default.
          */
         this.disableDoubleClickZoom = false;
@@ -99,6 +104,14 @@ export let SebmGoogleMap = SebmGoogleMap_1 = class SebmGoogleMap {
          * on which the Street View road overlay should not appear (e.g. a non-Earth map type).
          */
         this.streetViewControl = true;
+        /**
+         * Sets the viewport to contain the given bounds.
+         */
+        this.fitBounds = null;
+        /**
+         * The initial enabled/disabled state of the Scale control. This is disabled by default.
+         */
+        this.scaleControl = false;
         this._observableSubscriptions = [];
         /**
          * This event emitter gets emitted when the user clicks on the map (but not when they click on a
@@ -127,6 +140,10 @@ export let SebmGoogleMap = SebmGoogleMap_1 = class SebmGoogleMap {
          * This event is fired when the map becomes idle after panning or zooming.
          */
         this.idle = new EventEmitter();
+        /**
+         * This event is fired when the zoom level has changed.
+         */
+        this.zoomChange = new EventEmitter();
     }
     /** @internal */
     ngOnInit() {
@@ -136,17 +153,20 @@ export let SebmGoogleMap = SebmGoogleMap_1 = class SebmGoogleMap {
     }
     _initMapInstance(el) {
         this._mapsWrapper.createMap(el, {
-            center: { lat: this.latitude, lng: this.longitude },
+            center: { lat: this.latitude || 0, lng: this.longitude || 0 },
             zoom: this.zoom,
             disableDefaultUI: this.disableDefaultUI,
             backgroundColor: this.backgroundColor,
+            draggable: this.draggable,
             draggableCursor: this.draggableCursor,
             draggingCursor: this.draggingCursor,
             keyboardShortcuts: this.keyboardShortcuts,
             zoomControl: this.zoomControl,
             styles: this.styles,
-            streetViewControl: this.streetViewControl
+            streetViewControl: this.streetViewControl,
+            scaleControl: this.scaleControl
         });
+        // register event listeners
         this._handleMapCenterChange();
         this._handleMapZoomChange();
         this._handleMapMouseEvents();
@@ -161,9 +181,7 @@ export let SebmGoogleMap = SebmGoogleMap_1 = class SebmGoogleMap {
     /* @internal */
     ngOnChanges(changes) {
         this._updateMapOptionsChanges(changes);
-        if (changes['latitude'] != null || changes['longitude'] != null) {
-            this._updateCenter();
-        }
+        this._updatePosition(changes);
     }
     _updateMapOptionsChanges(changes) {
         let options = {};
@@ -183,7 +201,17 @@ export let SebmGoogleMap = SebmGoogleMap_1 = class SebmGoogleMap {
             setTimeout(() => { return this._mapsWrapper.triggerMapEvent('resize').then(() => resolve()); });
         });
     }
-    _updateCenter() {
+    _updatePosition(changes) {
+        if (changes['latitude'] == null && changes['longitude'] == null &&
+            changes['fitBounds'] == null) {
+            // no position update needed
+            return;
+        }
+        // we prefer fitBounds in changes
+        if (changes['fitBounds'] && this.fitBounds != null) {
+            this._fitBounds();
+            return;
+        }
         if (typeof this.latitude !== 'number' || typeof this.longitude !== 'number') {
             return;
         }
@@ -198,6 +226,13 @@ export let SebmGoogleMap = SebmGoogleMap_1 = class SebmGoogleMap {
             this._mapsWrapper.setCenter(newCenter);
         }
     }
+    _fitBounds() {
+        if (this.usePanning) {
+            this._mapsWrapper.panToBounds(this.fitBounds);
+            return;
+        }
+        this._mapsWrapper.fitBounds(this.fitBounds);
+    }
     _handleMapCenterChange() {
         const s = this._mapsWrapper.subscribeToMapEvent('center_changed').subscribe(() => {
             this._mapsWrapper.getCenter().then((center) => {
@@ -210,13 +245,16 @@ export let SebmGoogleMap = SebmGoogleMap_1 = class SebmGoogleMap {
     }
     _handleBoundsChange() {
         const s = this._mapsWrapper.subscribeToMapEvent('bounds_changed').subscribe(() => {
-            this._mapsWrapper.getBounds().then((bounds) => this.boundsChange.emit(bounds));
+            this._mapsWrapper.getBounds().then((bounds) => { this.boundsChange.emit(bounds); });
         });
         this._observableSubscriptions.push(s);
     }
     _handleMapZoomChange() {
         const s = this._mapsWrapper.subscribeToMapEvent('zoom_changed').subscribe(() => {
-            this._mapsWrapper.getZoom().then((z) => this.zoom = z);
+            this._mapsWrapper.getZoom().then((z) => {
+                this.zoom = z;
+                this.zoomChange.emit(z);
+            });
         });
         this._observableSubscriptions.push(s);
     }
@@ -242,19 +280,22 @@ export let SebmGoogleMap = SebmGoogleMap_1 = class SebmGoogleMap {
  * Map option attributes that can change over time
  */
 SebmGoogleMap._mapOptionsAttributes = [
-    'disableDoubleClickZoom', 'scrollwheel', 'draggableCursor', 'draggingCursor',
-    'keyboardShortcuts', 'zoomControl', 'styles', 'streetViewControl'
+    'disableDoubleClickZoom', 'scrollwheel', 'draggable', 'draggableCursor', 'draggingCursor',
+    'keyboardShortcuts', 'zoomControl', 'styles', 'streetViewControl', 'zoom'
 ];
 SebmGoogleMap = SebmGoogleMap_1 = __decorate([
     Component({
         selector: 'sebm-google-map',
-        providers: [GoogleMapsAPIWrapper, MarkerManager, InfoWindowManager, CircleManager],
+        providers: [GoogleMapsAPIWrapper, MarkerManager, InfoWindowManager, CircleManager, PolylineManager],
         inputs: [
-            'longitude', 'latitude', 'zoom', 'disableDoubleClickZoom', 'disableDefaultUI', 'scrollwheel',
-            'backgroundColor', 'draggableCursor', 'draggingCursor', 'keyboardShortcuts', 'zoomControl',
-            'styles', 'usePanning', 'streetViewControl'
+            'longitude', 'latitude', 'zoom', 'draggable: mapDraggable', 'disableDoubleClickZoom',
+            'disableDefaultUI', 'scrollwheel', 'backgroundColor', 'draggableCursor', 'draggingCursor',
+            'keyboardShortcuts', 'zoomControl', 'styles', 'usePanning', 'streetViewControl', 'fitBounds',
+            'scaleControl'
         ],
-        outputs: ['mapClick', 'mapRightClick', 'mapDblClick', 'centerChange', 'idle', 'boundsChange'],
+        outputs: [
+            'mapClick', 'mapRightClick', 'mapDblClick', 'centerChange', 'idle', 'boundsChange', 'zoomChange'
+        ],
         host: { '[class.sebm-google-map-container]': 'true' },
         styles: [`
     .sebm-google-map-container-inner {

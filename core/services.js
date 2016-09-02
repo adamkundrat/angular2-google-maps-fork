@@ -1,6 +1,6 @@
 /**
  * angular2-google-maps - Angular 2 components for Google Maps
- * @version v0.12.1
+ * @version v0.13.0
  * @link https://github.com/SebastianM/angular2-google-maps#readme
  * @license MIT
  */
@@ -13,6 +13,8 @@ var info_window_manager_1 = require('./services/managers/info-window-manager');
 exports.InfoWindowManager = info_window_manager_1.InfoWindowManager;
 var marker_manager_1 = require('./services/managers/marker-manager');
 exports.MarkerManager = marker_manager_1.MarkerManager;
+var polyline_manager_1 = require('./services/managers/polyline-manager');
+exports.PolylineManager = polyline_manager_1.PolylineManager;
 var lazy_maps_api_loader_1 = require('./services/maps-api-loader/lazy-maps-api-loader');
 exports.GoogleMapsScriptProtocol = lazy_maps_api_loader_1.GoogleMapsScriptProtocol;
 exports.LazyMapsAPILoader = lazy_maps_api_loader_1.LazyMapsAPILoader;

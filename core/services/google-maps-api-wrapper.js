@@ -1,6 +1,6 @@
 /**
  * angular2-google-maps - Angular 2 components for Google Maps
- * @version v0.12.1
+ * @version v0.13.0
  * @link https://github.com/SebastianM/angular2-google-maps#readme
  * @license MIT
  */
@@ -33,7 +33,6 @@ var GoogleMapsAPIWrapper = (function () {
         var _this = this;
         return this._loader.load().then(function () {
             var map = new google.maps.Map(el, mapOptions);
-            _this._gmap = map;
             _this._mapResolver(map);
             return;
         });
@@ -63,6 +62,13 @@ var GoogleMapsAPIWrapper = (function () {
             return new google.maps.Circle(options);
         });
     };
+    GoogleMapsAPIWrapper.prototype.createPolyline = function (options) {
+        return this.getNativeMap().then(function (map) {
+            var line = new google.maps.Polyline(options);
+            line.setMap(map);
+            return line;
+        });
+    };
     GoogleMapsAPIWrapper.prototype.subscribeToMapEvent = function (eventName) {
         var _this = this;
         return Observable_1.Observable.create(function (observer) {
@@ -87,11 +93,16 @@ var GoogleMapsAPIWrapper = (function () {
     GoogleMapsAPIWrapper.prototype.panTo = function (latLng) {
         return this._map.then(function (map) { return map.panTo(latLng); });
     };
+    GoogleMapsAPIWrapper.prototype.fitBounds = function (latLng) {
+        return this._map.then(function (map) { return map.fitBounds(latLng); });
+    };
+    GoogleMapsAPIWrapper.prototype.panToBounds = function (latLng) {
+        return this._map.then(function (map) { return map.panToBounds(latLng); });
+    };
     /**
      * Returns the native Google Maps Map instance. Be careful when using this instance directly.
      */
     GoogleMapsAPIWrapper.prototype.getNativeMap = function () { return this._map; };
-    GoogleMapsAPIWrapper.prototype.getNativeMapWithoutPromise = function () { return this._gmap; };
     /**
      * Triggers the given event name on the map instance.
      */

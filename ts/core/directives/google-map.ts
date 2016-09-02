@@ -1,19 +1,20 @@
 /**
  * angular2-google-maps - Angular 2 components for Google Maps
- * @version v0.12.1
+ * @version v0.13.0
  * @link https://github.com/SebastianM/angular2-google-maps#readme
  * @license MIT
  */
 import {Component, ElementRef, EventEmitter, OnChanges, OnInit, SimpleChange} from '@angular/core';
 import {Subscription} from 'rxjs/Subscription';
 
-import {MouseEvent} from '../events';
+import {MouseEvent} from '../map-types';
 import {GoogleMapsAPIWrapper} from '../services/google-maps-api-wrapper';
 import {LatLng, LatLngLiteral} from '../services/google-maps-types';
-import {LatLngBounds, MapTypeStyle} from '../services/google-maps-types';
+import {LatLngBounds, LatLngBoundsLiteral, MapTypeStyle} from '../services/google-maps-types';
 import {CircleManager} from '../services/managers/circle-manager';
 import {InfoWindowManager} from '../services/managers/info-window-manager';
 import {MarkerManager} from '../services/managers/marker-manager';
+import {PolylineManager} from '../services/managers/polyline-manager';
 
 /**
  * SebMGoogleMap renders a Google Map.
@@ -42,13 +43,17 @@ import {MarkerManager} from '../services/managers/marker-manager';
  */
 @Component({
   selector: 'sebm-google-map',
-  providers: [GoogleMapsAPIWrapper, MarkerManager, InfoWindowManager, CircleManager],
+  providers:
+      [GoogleMapsAPIWrapper, MarkerManager, InfoWindowManager, CircleManager, PolylineManager],
   inputs: [
-    'longitude', 'latitude', 'zoom', 'disableDoubleClickZoom', 'disableDefaultUI', 'scrollwheel',
-    'backgroundColor', 'draggableCursor', 'draggingCursor', 'keyboardShortcuts', 'zoomControl',
-    'styles', 'usePanning', 'streetViewControl'
+    'longitude', 'latitude', 'zoom', 'draggable: mapDraggable', 'disableDoubleClickZoom',
+    'disableDefaultUI', 'scrollwheel', 'backgroundColor', 'draggableCursor', 'draggingCursor',
+    'keyboardShortcuts', 'zoomControl', 'styles', 'usePanning', 'streetViewControl', 'fitBounds',
+    'scaleControl'
   ],
-  outputs: ['mapClick', 'mapRightClick', 'mapDblClick', 'centerChange', 'idle', 'boundsChange'],
+  outputs: [
+    'mapClick', 'mapRightClick', 'mapDblClick', 'centerChange', 'idle', 'boundsChange', 'zoomChange'
+  ],
   host: {'[class.sebm-google-map-container]': 'true'},
   styles: [`
     .sebm-google-map-container-inner {
@@ -81,6 +86,11 @@ export class SebmGoogleMap implements OnChanges, OnInit {
    * The zoom level of the map. The default zoom level is 8.
    */
   zoom: number = 8;
+
+  /**
+   * Enables/disables if map is draggable.
+   */
+  draggable: boolean = true;
 
   /**
    * Enables/disables zoom and center on double click. Enabled by default.
@@ -152,11 +162,21 @@ export class SebmGoogleMap implements OnChanges, OnInit {
   streetViewControl: boolean = true;
 
   /**
+   * Sets the viewport to contain the given bounds.
+   */
+  fitBounds: LatLngBoundsLiteral|LatLngBounds = null;
+
+  /**
+   * The initial enabled/disabled state of the Scale control. This is disabled by default.
+   */
+  scaleControl: boolean = false;
+
+  /**
    * Map option attributes that can change over time
    */
   private static _mapOptionsAttributes: string[] = [
-    'disableDoubleClickZoom', 'scrollwheel', 'draggableCursor', 'draggingCursor',
-    'keyboardShortcuts', 'zoomControl', 'styles', 'streetViewControl'
+    'disableDoubleClickZoom', 'scrollwheel', 'draggable', 'draggableCursor', 'draggingCursor',
+    'keyboardShortcuts', 'zoomControl', 'styles', 'streetViewControl', 'zoom'
   ];
 
   private _observableSubscriptions: Subscription[] = [];
@@ -194,6 +214,11 @@ export class SebmGoogleMap implements OnChanges, OnInit {
    */
   idle: EventEmitter<void> = new EventEmitter<void>();
 
+  /**
+   * This event is fired when the zoom level has changed.
+   */
+  zoomChange: EventEmitter<number> = new EventEmitter<number>();
+
   constructor(private _elem: ElementRef, private _mapsWrapper: GoogleMapsAPIWrapper) {}
 
   /** @internal */
@@ -205,17 +230,21 @@ export class SebmGoogleMap implements OnChanges, OnInit {
 
   private _initMapInstance(el: HTMLElement) {
     this._mapsWrapper.createMap(el, {
-      center: {lat: this.latitude, lng: this.longitude},
+      center: {lat: this.latitude || 0, lng: this.longitude || 0},
       zoom: this.zoom,
       disableDefaultUI: this.disableDefaultUI,
       backgroundColor: this.backgroundColor,
+      draggable: this.draggable,
       draggableCursor: this.draggableCursor,
       draggingCursor: this.draggingCursor,
       keyboardShortcuts: this.keyboardShortcuts,
       zoomControl: this.zoomControl,
       styles: this.styles,
-      streetViewControl: this.streetViewControl
+      streetViewControl: this.streetViewControl,
+      scaleControl: this.scaleControl
     });
+
+    // register event listeners
     this._handleMapCenterChange();
     this._handleMapZoomChange();
     this._handleMapMouseEvents();
@@ -232,9 +261,7 @@ export class SebmGoogleMap implements OnChanges, OnInit {
   /* @internal */
   ngOnChanges(changes: {[propName: string]: SimpleChange}) {
     this._updateMapOptionsChanges(changes);
-    if (changes['latitude'] != null || changes['longitude'] != null) {
-      this._updateCenter();
-    }
+    this._updatePosition(changes);
   }
 
   private _updateMapOptionsChanges(changes: {[propName: string]: SimpleChange}) {
@@ -259,7 +286,19 @@ export class SebmGoogleMap implements OnChanges, OnInit {
     });
   }
 
-  private _updateCenter() {
+  private _updatePosition(changes: {[propName: string]: SimpleChange}) {
+    if (changes['latitude'] == null && changes['longitude'] == null &&
+        changes['fitBounds'] == null) {
+      // no position update needed
+      return;
+    }
+
+    // we prefer fitBounds in changes
+    if (changes['fitBounds'] && this.fitBounds != null) {
+      this._fitBounds();
+      return;
+    }
+
     if (typeof this.latitude !== 'number' || typeof this.longitude !== 'number') {
       return;
     }
@@ -272,6 +311,14 @@ export class SebmGoogleMap implements OnChanges, OnInit {
     } else {
       this._mapsWrapper.setCenter(newCenter);
     }
+  }
+
+  private _fitBounds() {
+    if (this.usePanning) {
+      this._mapsWrapper.panToBounds(this.fitBounds);
+      return;
+    }
+    this._mapsWrapper.fitBounds(this.fitBounds);
   }
 
   private _handleMapCenterChange() {
@@ -287,14 +334,18 @@ export class SebmGoogleMap implements OnChanges, OnInit {
 
   private _handleBoundsChange() {
     const s = this._mapsWrapper.subscribeToMapEvent<void>('bounds_changed').subscribe(() => {
-      this._mapsWrapper.getBounds().then((bounds: LatLngBounds) => this.boundsChange.emit(bounds));
+      this._mapsWrapper.getBounds().then(
+          (bounds: LatLngBounds) => { this.boundsChange.emit(bounds); });
     });
     this._observableSubscriptions.push(s);
   }
 
   private _handleMapZoomChange() {
     const s = this._mapsWrapper.subscribeToMapEvent<void>('zoom_changed').subscribe(() => {
-      this._mapsWrapper.getZoom().then((z: number) => this.zoom = z);
+      this._mapsWrapper.getZoom().then((z: number) => {
+        this.zoom = z;
+        this.zoomChange.emit(z);
+      });
     });
     this._observableSubscriptions.push(s);
   }

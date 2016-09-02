@@ -1,6 +1,6 @@
 /**
  * angular2-google-maps - Angular 2 components for Google Maps
- * @version v0.12.1
+ * @version v0.13.0
  * @link https://github.com/SebastianM/angular2-google-maps#readme
  * @license MIT
  */
@@ -9,6 +9,8 @@ import {Observable} from 'rxjs/Observable';
 import {Observer} from 'rxjs/Observer';
 
 import * as mapTypes from './google-maps-types';
+import {Polyline} from './google-maps-types';
+import {PolylineOptions} from './google-maps-types';
 import {MapsAPILoader} from './maps-api-loader/maps-api-loader';
 
 // todo: add types for this
@@ -22,7 +24,6 @@ declare var google: any;
 export class GoogleMapsAPIWrapper {
   private _map: Promise<mapTypes.GoogleMap>;
   private _mapResolver: (value?: mapTypes.GoogleMap) => void;
-  public _gmap: mapTypes.GoogleMap;
 
   constructor(private _loader: MapsAPILoader, private _zone: NgZone) {
     this._map =
@@ -32,7 +33,6 @@ export class GoogleMapsAPIWrapper {
   createMap(el: HTMLElement, mapOptions: mapTypes.MapOptions): Promise<void> {
     return this._loader.load().then(() => {
       const map = new google.maps.Map(el, mapOptions);
-      this._gmap = map;
       this._mapResolver(<mapTypes.GoogleMap>map);
       return;
     });
@@ -67,6 +67,14 @@ export class GoogleMapsAPIWrapper {
     });
   }
 
+  public createPolyline(options: PolylineOptions): Promise<Polyline> {
+    return this.getNativeMap().then((map: mapTypes.GoogleMap) => {
+      let line = new google.maps.Polyline(options);
+      line.setMap(map);
+      return line;
+    });
+  }
+
   subscribeToMapEvent<E>(eventName: string): Observable<E> {
     return Observable.create((observer: Observer<E>) => {
       this._map.then((m: mapTypes.GoogleMap) => {
@@ -97,12 +105,18 @@ export class GoogleMapsAPIWrapper {
     return this._map.then((map) => map.panTo(latLng));
   }
 
+  fitBounds(latLng: mapTypes.LatLngBounds|mapTypes.LatLngBoundsLiteral): Promise<void> {
+    return this._map.then((map) => map.fitBounds(latLng));
+  }
+
+  panToBounds(latLng: mapTypes.LatLngBounds|mapTypes.LatLngBoundsLiteral): Promise<void> {
+    return this._map.then((map) => map.panToBounds(latLng));
+  }
+
   /**
    * Returns the native Google Maps Map instance. Be careful when using this instance directly.
    */
   getNativeMap(): Promise<mapTypes.GoogleMap> { return this._map; }
-
-  getNativeMapWithoutPromise(): mapTypes.GoogleMap { return this._gmap; }
 
   /**
    * Triggers the given event name on the map instance.
